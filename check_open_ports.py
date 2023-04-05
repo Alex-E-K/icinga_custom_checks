@@ -14,10 +14,11 @@ def start_check(host: str, start_port: int, end_port: int):
         location = (host, port)
         result = check_port_open(location)
 
-        print("Result for port " + str(port) + ": " + str(result))
+        #print("Result for port " + str(port) + ": " + str(result))
 
         if result == 0:
-            open_ports.extend([int(i) for i in ("{}".format(port)).split(" ")])
+            open_ports.append(port)
+
     return open_ports
 
 def check_port_open(location):
@@ -38,6 +39,23 @@ def parse_open_ports(ports: str):
         print("Error, check list of allowed ports. Example: -P 500,21,23,80,3333")
         sys.exit(EXIT_UNKNOWN)
 
+def check_not_allowed_ports(open_ports, allowed_ports):
+    not_allowed_ports = []
+    for port in open_ports:
+        not_allowed_ports.append(port)
+    for port in allowed_ports:
+        if port in open_ports:
+            not_allowed_ports.remove(port)
+    return not_allowed_ports
+
+def check_false_allowed_ports(open_ports, allowed_ports):
+    false_allowed_ports = []
+    for port in allowed_ports:
+        false_allowed_ports.append(port)
+    for port in allowed_ports:
+        if port in open_ports:
+            false_allowed_ports.remove(port)
+    return false_allowed_ports
 
 def main():
     parser = OptionParser("usage: %prog -h <IP address> and -p <port or list of ports>, that have been authorized to be open")
@@ -63,9 +81,25 @@ def main():
 
     open_ports = start_check(opts.host, start, end)
     allowed_ports = parse_open_ports(opts.port)
+    not_allowed_ports = check_not_allowed_ports(open_ports, allowed_ports)
+    false_allowed_ports = check_false_allowed_ports(open_ports, allowed_ports)
 
-    print(allowed_ports)
-    print(open_ports)
+    if len(not_allowed_ports) > 0:
+        ports = ""
+        for port in not_allowed_ports:
+            ports = ports + str(port) + "\n"
+        print("Critical, there are ports open wich were not specified as allowed open ports. Open ports are:\n" + ports)
+        sys.exit(EXIT_CRITICAL)
+    
+    if len(false_allowed_ports) > 0:
+        ports = ""
+        for port in false_allowed_ports:
+            ports = ports + str(port) + "\n"
+        print("Warning, there are more ports specified as allowed open ports than are actually open. Unused allowed ports are:\n" + ports)
+        sys.exit(EXIT_WARNING)
+    
+    print("OK, all open ports are marked as allowed")
+    sys.exit(EXIT_OK)
 
 if __name__ == "__main__":
     main()
