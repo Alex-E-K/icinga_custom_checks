@@ -1,0 +1,13 @@
+object CheckCommand "python_check" {
+    import "plugin-check-command"
+    command = [ PluginDir + "/your_python_script" ]
+
+    arguments = {
+        "-check" = {
+            value = "$python_check$"
+        }
+        ";exit" = {
+            value = "$LastExitCode"
+        }
+    }
+}
